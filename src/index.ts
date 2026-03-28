@@ -1,19 +1,26 @@
 /**
- * @purrdict/hip4 — barrel exports
+ * @purrdict/hip4 — HIP-4 prediction market SDK.
+ *
+ * This SDK adds the HIP-4 knowledge layer on top of @nktkas/hyperliquid.
+ * It covers only what nktkas does not provide:
+ *
+ * - Market discovery: parseDescription, discoverMarkets
+ * - Coin/asset mapping helpers: outcomeToAsset, Market type
+ * - Minimum order size formula: getMinShares
+ * - 5-sig-fig tick size and price formatting: computeTickSize, formatPrice, stripZeros
+ * - Order action construction: buildOrderAction (asset encoding, trailing zeros, builder fee)
+ * - HIP-4 specific types and constants
+ *
+ * For network I/O (info queries, order submission, WebSocket subscriptions)
+ * use @nktkas/hyperliquid directly with the types and helpers from this package.
  *
  * import {
- *   createClient,
  *   discoverMarkets,
  *   getMinShares,
- *   placeOrder,
- *   fairPrice,
- *   subscribePrices,
+ *   buildOrderAction,
+ *   formatPrice,
  * } from "@purrdict/hip4";
  */
-
-// Client factory
-export { createClient } from "./client.js";
-export type { ClientConfig, HIP4Client } from "./client.js";
 
 // Types, constants, and helpers
 export {
@@ -21,15 +28,12 @@ export {
   SPOT_ASSET_OFFSET,
   MIN_NOTIONAL,
   MAX_BUILDER_FEE,
-  SIGNATURE_CHAIN_ID,
-  KNOWN_TOKEN_IDS,
   outcomeToAsset,
   isResting,
   isFilled,
   isError,
 } from "./types.js";
 export type {
-  HIP4Config,
   MarketType,
   ParsedDescription,
   Market,
@@ -37,14 +41,6 @@ export type {
   OutcomeMeta,
   OutcomeEntry,
   QuestionEntry,
-  L2Book,
-  BookLevel,
-  SpotState,
-  OpenOrder,
-  QuoteLevel,
-  Quote,
-  TokenBalance,
-  Balances,
 } from "./types.js";
 
 // Market discovery
@@ -59,62 +55,12 @@ export {
 
 // Pricing
 export {
-  normalCDF,
-  fairPrice,
   computeTickSize,
   roundToTick,
   formatPrice,
   stripZeros,
-  computeQuote,
-  scaledVol,
-  BASE_VOL,
-  DEFAULT_VOL,
 } from "./pricing.js";
 
-// Orders
-export { placeOrder, placePerpOrder, cancelOrder, cancelAllOrders } from "./orders.js";
-export type { OrderParams, PerpOrderParams } from "./orders.js";
-
-// Wallet
-export {
-  getBalances,
-  sendAsset,
-  usdClassTransfer,
-  approveBuilderFee,
-  checkBuilderApproval,
-  ensureBuilderApproval,
-  resolveToken,
-} from "./wallet.js";
-
-// Subscriptions
-export {
-  subscribePrices,
-  subscribeBook,
-  subscribeTrades,
-  subscribeUserFills,
-} from "./subscriptions.js";
-export type {
-  PriceUpdate,
-  BookUpdate,
-  TradeUpdate,
-  FillUpdate,
-  Subscription,
-} from "./subscriptions.js";
-
-// Info endpoint wrappers
-export {
-  fetchOutcomeMeta,
-  fetchAllMids,
-  fetchL2Book,
-  fetchSpotState,
-  fetchOpenOrders,
-  fetchUserFees,
-  fetchSpotMetaAndAssetCtxs,
-} from "./info.js";
-export type {
-  SpotToken,
-  SpotPair,
-  SpotMeta,
-  SpotAssetCtx,
-  UserFees,
-} from "./info.js";
+// Order action construction
+export { buildOrderAction } from "./orders.js";
+export type { OrderParams, OrderAction, SingleOrder } from "./orders.js";

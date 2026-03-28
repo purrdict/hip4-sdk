@@ -2,7 +2,8 @@
   "name": "@purrdict/hip4",
   "version": "0.1.0",
   "private": false,
-  "description": "TypeScript SDK for HIP-4 prediction markets on Hyperliquid — market discovery, order placement, real-time subscriptions, and pricing utilities.",
+  "description": "HIP-4 knowledge layer for Hyperliquid — market discovery, coin mapping, tick size, order payload construction. Use with @nktkas/hyperliquid for network I/O.",
+  "sideEffects": false,
   "keywords": [
     "hyperliquid",
     "hip4",
@@ -41,14 +42,12 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@nktkas/hyperliquid": ">=0.32.0",
-    "viem": ">=2.0.0"
+    "@nktkas/hyperliquid": ">=0.32.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@nktkas/hyperliquid": "^0.32.1",
     "bun-types": "^1.3.10",
-    "typescript": "^5",
-    "viem": "^2.47.0"
+    "typescript": "^5"
   }
 }

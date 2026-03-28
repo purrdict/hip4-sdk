@@ -1,8 +1,9 @@
 /**
- * @purrdict/hip4 — shared types and constants
+ * @purrdict/hip4 — HIP-4 specific types and constants.
  *
  * Leaf module: no imports from other SDK modules.
- * All types are derived from the public Hyperliquid API and HIP-4 conventions.
+ * Only contains types and constants that are HIP-4 specific —
+ * things that @nktkas/hyperliquid does not already provide.
  */
 
 // ---------------------------------------------------------------------------
@@ -40,44 +41,6 @@ export const MIN_NOTIONAL = 10;
  * Buy-side fee is always 0.
  */
 export const MAX_BUILDER_FEE = 1000;
-
-/**
- * Default signature chain ID for headless (private-key) contexts.
- * When using a browser wallet, use the wallet's connected chain dynamically.
- * Hyperliquid accepts any EIP-712 chainId in the domain.
- */
-export const SIGNATURE_CHAIN_ID = "0x66eee";
-
-/**
- * Well-known token IDs for sendAsset.
- * Format: "NAME:0x<hex>" — required by the exchange API (bare names rejected).
- * These are stable testnet identifiers.
- */
-export const KNOWN_TOKEN_IDS: Record<string, string> = {
-  USDH: "USDH:0x471fd4480bb9943a1fe080ab0d4ff36c",
-  USDC: "USDC:0xeb62eee3685fc4c43992febcd9e75443",
-};
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
-export interface HIP4Config {
-  apiUrl: string;
-  wsUrl: string;
-  isTestnet: boolean;
-  /**
-   * Builder address that collects referral fees on sells.
-   * CRITICAL: Must be lowercased — the exchange lowercases before hashing.
-   * Checksummed address produces a different hash and a wrong recovered signer.
-   */
-  builderAddress: string;
-  /**
-   * Builder fee in tenths of a basis point.
-   * 100 = 0.1%, 1000 = 1.0% (maximum).
-   */
-  builderFee: number;
-}
 
 // ---------------------------------------------------------------------------
 // Market types
@@ -125,30 +88,7 @@ export interface Market {
 }
 
 // ---------------------------------------------------------------------------
-// Order types
-// ---------------------------------------------------------------------------
-
-export type OrderStatus =
-  | { resting: { oid: number } }
-  | { filled: { totalSz: string; avgPx: string; oid: number } }
-  | { error: string };
-
-export function isResting(s: OrderStatus): s is { resting: { oid: number } } {
-  return "resting" in s;
-}
-
-export function isFilled(
-  s: OrderStatus,
-): s is { filled: { totalSz: string; avgPx: string; oid: number } } {
-  return "filled" in s;
-}
-
-export function isError(s: OrderStatus): s is { error: string } {
-  return "error" in s;
-}
-
-// ---------------------------------------------------------------------------
-// API response types
+// outcomeMeta API response types (HIP-4 specific endpoint)
 // ---------------------------------------------------------------------------
 
 export interface OutcomeMeta {
@@ -169,58 +109,27 @@ export interface QuestionEntry {
   namedOutcomes: number[];
 }
 
-export interface L2Book {
-  /** [bids, asks] — each entry is [price, size, numOrders] */
-  levels: [BookLevel[], BookLevel[]];
-}
-
-export interface BookLevel {
-  px: string;
-  sz: string;
-  n: number;
-}
-
-export interface SpotState {
-  balances: { coin: string; total: string; hold: string }[];
-}
-
-export interface OpenOrder {
-  coin: string;
-  side: string;
-  limitPx: string;
-  sz: string;
-  oid: number;
-}
-
 // ---------------------------------------------------------------------------
-// Pricing types
+// Order status narrowing (parseOrderResponse result from nktkas)
 // ---------------------------------------------------------------------------
 
-export interface QuoteLevel {
-  price: number;
-  size: number;
+export type OrderStatus =
+  | { resting: { oid: number } }
+  | { filled: { totalSz: string; avgPx: string; oid: number } }
+  | { error: string };
+
+export function isResting(s: OrderStatus): s is { resting: { oid: number } } {
+  return "resting" in s;
 }
 
-export interface Quote {
-  fair: number;
-  yesBids: QuoteLevel[];
-  noBids: QuoteLevel[];
+export function isFilled(
+  s: OrderStatus,
+): s is { filled: { totalSz: string; avgPx: string; oid: number } } {
+  return "filled" in s;
 }
 
-// ---------------------------------------------------------------------------
-// Balance types
-// ---------------------------------------------------------------------------
-
-export interface TokenBalance {
-  total: number;
-  hold: number;
-  free: number;
-}
-
-export interface Balances {
-  usdh: TokenBalance;
-  usdc: TokenBalance;
-  tokens: Map<string, TokenBalance>;
+export function isError(s: OrderStatus): s is { error: string } {
+  return "error" in s;
 }
 
 // ---------------------------------------------------------------------------

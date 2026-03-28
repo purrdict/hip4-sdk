@@ -286,6 +286,205 @@ This means you only need to post buy orders to make a two-sided market.
 
 ---
 
+## React Usage
+
+The SDK works great in React. Here are patterns that avoid common pitfalls.
+
+### Setup: Create client once at the app level
+
+```tsx
+// lib/hip4.ts — singleton client, created outside React
+import { createClient } from "@purrdict/hip4";
+
+export const hip4 = createClient({
+  testnet: true,
+  builderAddress: "0xYourBuilderAddress",
+  builderFee: 100,
+});
+```
+
+### Fetching markets with useSyncExternalStore (recommended)
+
+Don't use `useEffect` for data that drives UI. Use `useSyncExternalStore` for tear-free reads:
+
+```tsx
+// hooks/use-hip4-markets.ts
+import { useSyncExternalStore, useRef, useCallback } from "react";
+import { discoverMarkets, fetchOutcomeMeta, fetchAllMids, subscribePrices } from "@purrdict/hip4";
+import type { Market, Subscription } from "@purrdict/hip4";
+import { hip4 } from "@/lib/hip4";
+
+type Store = {
+  markets: Market[];
+  mids: Record<string, string>;
+  status: "idle" | "loading" | "ready" | "error";
+};
+
+let store: Store = { markets: [], mids: {}, status: "idle" };
+let listeners = new Set<() => void>();
+let sub: Subscription | null = null;
+
+function notify() {
+  listeners.forEach((l) => l());
+}
+
+// Initialize once — called from an event handler or useEffect (never during render)
+export async function initMarkets() {
+  if (store.status !== "idle") return;
+  store = { ...store, status: "loading" };
+  notify();
+
+  const [meta, mids] = await Promise.all([
+    fetchOutcomeMeta(hip4.info),
+    fetchAllMids(hip4.info),
+  ]);
+
+  const markets = discoverMarkets(meta, mids);
+  store = { markets, mids, status: "ready" };
+  notify();
+
+  // Subscribe to live prices
+  sub = await subscribePrices(hip4.sub, ({ mids: update }) => {
+    store = { ...store, mids: { ...store.mids, ...update } };
+    notify();
+  });
+}
+
+export function useMarketStore() {
+  return useSyncExternalStore(
+    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
+    () => store,
+    () => store,
+  );
+}
+
+// Usage in component:
+// const { markets, mids, status } = useMarketStore();
+// const btcMid = mids["#23400"];
+```
+
+### Displaying a market card
+
+```tsx
+import { useMarketStore } from "@/hooks/use-hip4-markets";
+import { formatLabel, timeToExpiry, getMinShares } from "@purrdict/hip4";
+
+function MarketCard({ market }: { market: Market }) {
+  const { mids } = useMarketStore();
+  const yesMid = parseFloat(mids[market.yesCoin] ?? "0.5");
+  const noMid = 1 - yesMid;
+  const ttl = timeToExpiry(market);
+  const minShares = getMinShares(yesMid);
+
+  return (
+    <div className="rounded-xl border p-4">
+      <h3>{formatLabel(market)}</h3>
+      <div className="flex gap-4">
+        <span className="text-green-500">Yes {(yesMid * 100).toFixed(1)}¢</span>
+        <span className="text-red-500">No {(noMid * 100).toFixed(1)}¢</span>
+      </div>
+      <p className="text-sm text-muted">
+        {ttl > 0 ? `${Math.floor(ttl)}m left` : "Settled"} · Min {minShares} shares
+      </p>
+    </div>
+  );
+}
+```
+
+### Placing an order with wagmi
+
+```tsx
+import { useAccount, useWalletClient } from "wagmi";
+import { placeOrder, getMinShares, formatPrice } from "@purrdict/hip4";
+import { hip4 } from "@/lib/hip4";
+
+function TradeButton({ market, price, shares }: {
+  market: Market;
+  price: number;
+  shares: number;
+}) {
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
+
+  async function handleTrade() {
+    if (!walletClient) return;
+
+    const exchange = hip4.exchange(walletClient);
+    const status = await placeOrder(exchange, hip4.config, {
+      asset: market.yesAsset,
+      isBuy: true,
+      price,
+      size: shares,
+      tif: "Gtc",
+      markPx: price, // enables min-shares validation
+    });
+
+    if ("resting" in status) {
+      console.log("Order placed:", status.resting.oid);
+    } else if ("filled" in status) {
+      console.log("Filled:", status.filled.totalSz, "@", status.filled.avgPx);
+    } else if ("error" in status) {
+      console.error("Rejected:", status.error);
+    }
+  }
+
+  return (
+    <button onClick={handleTrade} disabled={!walletClient}>
+      Buy {shares} shares @ {formatPrice(price)}
+    </button>
+  );
+}
+```
+
+### Live orderbook
+
+```tsx
+import { useState, useEffect, useRef } from "react";
+import { subscribeBook } from "@purrdict/hip4";
+import type { Subscription } from "@purrdict/hip4";
+import { hip4 } from "@/lib/hip4";
+
+function useOrderbook(coin: string) {
+  const [bids, setBids] = useState<{ px: string; sz: string }[]>([]);
+  const [asks, setAsks] = useState<{ px: string; sz: string }[]>([]);
+  const subRef = useRef<Subscription | null>(null);
+
+  // useEffect is OK here — it's managing a WebSocket lifecycle, not fetching data
+  useEffect(() => {
+    let cancelled = false;
+
+    subscribeBook(hip4.sub, coin, (update) => {
+      if (cancelled) return;
+      setBids(update.levels[0]);
+      setAsks(update.levels[1]);
+    }).then((s) => {
+      if (cancelled) s.unsubscribe();
+      else subRef.current = s;
+    });
+
+    return () => {
+      cancelled = true;
+      subRef.current?.unsubscribe();
+    };
+  }, [coin]);
+
+  return { bids, asks };
+}
+```
+
+### When useEffect is OK vs not
+
+| Pattern | useEffect? | Why |
+|---------|-----------|-----|
+| WebSocket subscribe/unsubscribe | ✅ Yes | Lifecycle management |
+| Client close on unmount | ✅ Yes | Cleanup |
+| Fetching market data for display | ❌ No | Use `useSyncExternalStore` |
+| Updating prices from WS | ❌ No | External store, not local state |
+| Order placement | ❌ No | Event handler (`onClick`) |
+| Timer/countdown | ✅ Yes | `setInterval` lifecycle |
+
+---
+
 ## Resources
 
 - [Purrdict](https://purrdict.xyz) — HIP-4 prediction market app

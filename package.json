@@ -1,8 +1,8 @@
 {
   "name": "@purrdict/hip4",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
-  "description": "HIP-4 knowledge layer for Hyperliquid — market discovery, coin mapping, tick size, order payload construction. Use with @nktkas/hyperliquid for network I/O.",
+  "description": "HIP-4 knowledge layer for Hyperliquid \u2014 market discovery, coin mapping, tick size, order payload construction. Use with @nktkas/hyperliquid for network I/O.",
   "sideEffects": false,
   "keywords": [
     "hyperliquid",

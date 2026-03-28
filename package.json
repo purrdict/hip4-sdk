@@ -1,0 +1,54 @@
+{
+  "name": "@purrdict/hip4",
+  "version": "0.1.0",
+  "private": false,
+  "description": "TypeScript SDK for HIP-4 prediction markets on Hyperliquid — market discovery, order placement, real-time subscriptions, and pricing utilities.",
+  "keywords": [
+    "hyperliquid",
+    "hip4",
+    "prediction-markets",
+    "blockchain",
+    "defi",
+    "trading",
+    "typescript"
+  ],
+  "homepage": "https://purrdict.xyz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/purrdict/hip4"
+  },
+  "license": "MIT",
+  "author": "Purrdict <hello@purrdict.xyz>",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc --outDir dist",
+    "test": "bun test tests/",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "@nktkas/hyperliquid": ">=0.32.0",
+    "viem": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@nktkas/hyperliquid": "^0.32.1",
+    "bun-types": "^1.3.10",
+    "typescript": "^5",
+    "viem": "^2.47.0"
+  }
+}
